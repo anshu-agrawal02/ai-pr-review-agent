@@ -33,7 +33,7 @@ const SEVERITY_LABEL = {
   info: '🔵 **Info**',
 };
 
-async function postReview(owner, repo, pullNumber, commitSha, findings) {
+async function postReview(owner, repo, pullNumber, commitSha, findings, notes = []) {
   if (findings.length === 0) {
     console.log('No findings, nothing to post.');
     return;
@@ -48,13 +48,18 @@ async function postReview(owner, repo, pullNumber, commitSha, findings) {
     body: `${SEVERITY_LABEL[f.severity]}\n\n${f.comment}`,
   }));
 
+  let body = `🤖 Automated first-pass review: ${findings.length} finding(s).`;
+  if (notes.length > 0) {
+    body += `\n\n**Not fully reviewed:**\n${notes.map((n) => `- ${n}`).join('\n')}`;
+  }
+
   await octokit.rest.pulls.createReview({
     owner,
     repo,
     pull_number: pullNumber,
     commit_id: commitSha,
     event: 'COMMENT', // leave comments only; don't approve or request changes
-    body: `🤖 Automated first-pass review: ${findings.length} finding(s).`,
+    body,
     comments,
   });
 

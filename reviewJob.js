@@ -33,14 +33,14 @@ async function processReview({ owner, repo, pullNumber, commitSha }, job) {
   }
   console.log('Cache miss, reviewing...');
 
-  const findings = await reviewDiff(files);
+  const { findings, notes } = await reviewDiff(files);
 
   // Dedup: drop findings we already posted on earlier commits of this PR
   const newFindings = await filterNewFindings(owner, repo, pullNumber, findings);
   console.log(`${findings.length} valid finding(s), ${newFindings.length} new`);
   console.log(JSON.stringify(newFindings, null, 2));
 
-  await postReview(owner, repo, pullNumber, commitSha, newFindings);
+  await postReview(owner, repo, pullNumber, commitSha, newFindings, notes);
   await markPosted(owner, repo, pullNumber, newFindings);
 
   // Only cache after a successful post, so a failed run can be retried
