@@ -3,6 +3,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { enqueueReview, startWorker } = require('./queue');
 const { processReview } = require('./reviewJob');
+const { connectDb, listReviews, getStats } = require('./db');
 
 const app = express();
 
@@ -27,8 +28,34 @@ function verifyGithubSignature(req) {
   return crypto.timingSafeEqual(a, b);
 }
 
+// Protects the history endpoints. If ADMIN_TOKEN isn't set, they don't exist.
+function requireAdmin(req, res, next) {
+  if (!process.env.ADMIN_TOKEN) return res.status(404).send('Not found');
+  if (req.headers['x-admin-token'] !== process.env.ADMIN_TOKEN) {
+    return res.status(401).send('Unauthorized');
+  }
+  next();
+}
+
 app.get('/', (req, res) => {
   res.send('AI PR Review Agent is alive');
+});
+
+app.get('/api/reviews', requireAdmin, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit || '20', 10);
+    res.json(await listReviews({ limit, repo: req.query.repo }));
+  } catch (err) {
+    res.status(503).json({ error: 'History unavailable', detail: err.message });
+  }
+});
+
+app.get('/api/stats', requireAdmin, async (req, res) => {
+  try {
+    res.json(await getStats());
+  } catch (err) {
+    res.status(503).json({ error: 'History unavailable', detail: err.message });
+  }
 });
 
 app.post('/webhook/github', async (req, res) => {
@@ -59,6 +86,7 @@ app.post('/webhook/github', async (req, res) => {
   res.status(200).send('Received');
 });
 
+connectDb();
 startWorker(processReview);
 
 const PORT = process.env.PORT || 3000;
