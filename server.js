@@ -1,9 +1,9 @@
 require('dotenv').config();
 const express = require('express');
-const crypto = require('crypto');
 const { enqueueReview, startWorker } = require('./queue');
 const { processReview } = require('./reviewJob');
 const { connectDb, listReviews, getStats } = require('./db');
+const { verifySignature } = require('./signature');
 
 const app = express();
 
@@ -15,17 +15,11 @@ app.use(express.json({
 }));
 
 function verifyGithubSignature(req) {
-  const signature = req.headers['x-hub-signature-256'];
-  if (!signature || !req.rawBody) return false;
-
-  const hmac = crypto.createHmac('sha256', process.env.GITHUB_WEBHOOK_SECRET);
-  const digest = 'sha256=' + hmac.update(req.rawBody).digest('hex');
-
-  const a = Buffer.from(signature);
-  const b = Buffer.from(digest);
-  if (a.length !== b.length) return false;
-
-  return crypto.timingSafeEqual(a, b);
+  return verifySignature(
+    req.rawBody,
+    req.headers['x-hub-signature-256'],
+    process.env.GITHUB_WEBHOOK_SECRET
+  );
 }
 
 // Protects the history endpoints. If ADMIN_TOKEN isn't set, they don't exist.
