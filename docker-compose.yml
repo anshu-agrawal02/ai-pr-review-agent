@@ -1,0 +1,32 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      # these override whatever is in .env, so the app talks to the containers below
+      REDIS_URL: redis://redis:6379
+      MONGODB_URI: mongodb://mongo:27017/pr-review-agent
+    depends_on:
+      - redis
+      - mongo
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    # small memory cap, because cheap servers have very little RAM
+    command: ["mongod", "--wiredTigerCacheSizeGB", "0.25"]
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  redis-data:
+  mongo-data:
