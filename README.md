@@ -2,8 +2,7 @@
 x
 A Node.js service that listens for GitHub pull request webhooks, reviews the diff with an LLM, and posts the findings as **inline review comments on the exact changed lines**, like a junior engineer doing a first-pass review.
 
-![AI Code Review Agent reviewing a GitHub pull request](docs/screenshot.png)
-
+![AI Code Review Agent reviewing a GitHub pull request](docs/screeshot.png)
 ## How it works
 
 ```mermaid
